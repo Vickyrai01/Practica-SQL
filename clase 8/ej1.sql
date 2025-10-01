@@ -35,6 +35,7 @@ BEGIN
 	INSERT INTO products_historia_precios
 	SELECT d.stock_num, d.manu_code, getdate(), SYSTEM_USER, d.unit_price, i.unit_price, 'A'
 	FROM deleted d INNER JOIN inserted i ON (d.manu_code = i.manu_code) AND (d.stock_num = i.stock_num)
+    WHERE d.unit_price != i.unit_price
 END
 
 SELECT * FROM products
@@ -44,6 +45,5 @@ DROP TRIGGER products_historia_precios_auditoria
 UPDATE products
 SET unit_price = 440
 WHERE manu_code = 'HRO' AND stock_num = 1 
-
 
 SELECT * FROM products_historia_precios 
