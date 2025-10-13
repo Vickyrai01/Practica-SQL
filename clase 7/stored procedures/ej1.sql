@@ -26,7 +26,7 @@ CREATE PROCEDURE actualizarEstadisticas
 AS
 BEGIN
 	DECLARE cliente CURSOR FOR
-		SELECT c.customer_num, COUNT(o.order_num) cant_ordenes, MAX(order_date) fecha_ultima_compra
+		SELECT c.customer_num, COUNT(distinct o.order_num) cant_ordenes, MAX(order_date) fecha_ultima_compra
 		FROM customer c 
 		INNER JOIN orders o ON (c.customer_num = o.customer_num)
 		INNER JOIN items i ON  (o.order_num = i.order_num)
