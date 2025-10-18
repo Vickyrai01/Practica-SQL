@@ -9,7 +9,6 @@ cantidad total vendida y por monto total, ambos en forma decreciente.
 Nota: No se permiten utilizar funciones, ni tablas temporales.
 */
 
-
 SELECT i.manu_code, i.stock_num, pt.description, SUM(i.quantity) cantidad_vendida, SUM(i.quantity * i.unit_price) total_vendido
 FROM items i
 	INNER JOIN products p ON (i.stock_num = p.stock_num AND i.manu_code = p.manu_code)
