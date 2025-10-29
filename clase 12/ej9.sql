@@ -1,3 +1,11 @@
+/*
+9. Listar el Número, nombre, apellido, estado, cantidad de Órdenes, monto total comprado por Cliente
+durante el año 2015 que no sean del estado de Florida.
+Mostrar sólo aquellos clientes cuyo monto total comprado sea mayor que el promedio del monto total
+comprado por Cliente que no sean del estado Florida. Ordenado por total comprado en forma
+descendente.
+*/
+
 SELECT c.customer_num, fname, lname, state, COUNT(DISTINCT o.order_num) cant_ordenes, SUM(i.quantity * i.unit_price) total_gastado
 FROM customer c
 	INNER JOIN orders o ON (c.customer_num = o.customer_num)
