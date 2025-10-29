@@ -19,6 +19,8 @@ HAVING SUM(i.quantity * i.unit_price) >
 	 FROM customer c1
 		INNER JOIN orders o1 ON (o1.customer_num = c1.customer_num)
 		INNER JOIN items i1 ON (o1.order_num = i1.order_num)
-	  WHERE c1.state <> 'FL')TC
+	  WHERE c1.state <> 'FL'
+	  GROUP BY c1.customer_num)TC
 	  )
 ORDER BY SUM(i.quantity * i.unit_price) DESC
+
