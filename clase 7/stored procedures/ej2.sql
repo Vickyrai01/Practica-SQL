@@ -114,7 +114,7 @@ BEGIN
 			UPDATE customer SET status = 'P' WHERE customer_num = @customer_num;
 
 			FETCH NEXT FROM customer_cursor INTO @customer_num, @fname, @lname, @company, @address1, @address2, @city, @state, @zipcode, @phone;
-			END
+		END
 
 		COMMIT TRAN
 		
