@@ -27,3 +27,22 @@ GROUP BY m.manu_name, c.lname, c.fname, pt.description
 HAVING SUM(i.unit_price * i.quantity)/ SUM(quantity) > 150 
 
 -- Yo asumi que esta buscando el lider de ventas para ese cliente en especifico, en caso contrario solo habria que sacar el where de la subconsulta
+
+
+'crear una consulta que devuelva:'
+'Apellido, nombre AS CLIENTE,
+suma de todo lo comprado por el cliente as totalCompra
+apellido,nombre as ClienteReferido ,
+suma de todo lo comprado por el referido * 0.05 AS totalComision'
+
+SELECT c.lname + ', ' + c.fname Cliente, COALESCE(SUM(i.unit_price * i.quantity), 0) totalCompra,COALESCE( cr.ClienteReferido, 'No tiene') ClienteReferido,COALESCE(cr.totalComision, 0) totalComision
+FROM customer c 
+	LEFT JOIN orders o ON (o.customer_num = c.customer_num)
+	LEFT JOIN items i ON (i.order_num = o.order_num)
+	LEFT JOIN (SELECT c1.customer_num, c1.lname + ', ' + c1.fname ClienteReferido, SUM(i1.unit_price * i1.quantity) * 0.05 totalComision
+				FROM customer c1
+					INNER JOIN orders o1 ON (o1.customer_num = c1.customer_num)
+					INNER JOIN items i1 ON (i1.order_num = o1.order_num)
+				GROUP BY c1.customer_num,c1.lname,c1.fname) cr ON (cr.customer_num = c.customer_num_referedBy)
+GROUP BY c.lname,c.fname, cr.ClienteReferido, cr.totalComision
+ORDER BY Cliente
