@@ -71,3 +71,32 @@ FROM customer c
 				GROUP BY c1.customer_num, i1.stock_num,c1.fname, c1.lname) cr ON (cr.customer_num = c.customer_num_referedBy AND cr.stock_num = i.stock_num)
 GROUP BY pt.description, c.fname, c.lname,nombre_referido, monto_total_referido
 ORDER BY pt.description, nombre_referido
+
+
+/*
+4)
+vista que muestre las tres primeras provincias que tengan la mayor cantidad de compras ,
+mostrar nombre y apellido del cliente con mayor total de compra para esa provincia, 
+total comprado y nombre de la provincia.
+*/
+GO
+
+CREATE VIEW prov_mas_comprasVW AS
+	SELECT c.fname, c.lname, SUM(i.quantity * i.unit_price) total_gastado, s.state
+	FROM customer c
+		INNER JOIN orders o ON (o.customer_num = c.customer_num)
+		INNER JOIN items i ON (i.order_num = o.order_num)
+		INNER JOIN (SELECT TOP 3 c1.state
+					FROM customer c1
+						INNER JOIN orders o1 ON (o1.customer_num = c1.customer_num)
+						INNER JOIN items i1 ON (i1.order_num = o1.order_num)
+					GROUP BY c1.state
+					ORDER BY SUM(i1.quantity * i1.unit_price) DESC) s ON (c.state = s.state)
+	WHERE c.customer_num IN (SELECT TOP 1 c2.customer_num
+							 FROM customer c2
+								INNER JOIN orders o2 ON (c2.customer_num = o2.customer_num)
+								INNER JOIN items i2 ON (i2.order_num = o2.order_num)
+							 WHERE c2.state = s.state
+							 GROUP BY c2.customer_num
+							 ORDER BY SUM(i2.quantity * i2.unit_price) DESC)
+	GROUP BY c.fname, c.lname, s.state
