@@ -46,3 +46,28 @@ FROM customer c
 				GROUP BY c1.customer_num,c1.lname,c1.fname) cr ON (cr.customer_num = c.customer_num_referedBy)
 GROUP BY c.lname,c.fname, cr.ClienteReferido, cr.totalComision
 ORDER BY Cliente
+
+
+/*
+Obtener los Tipos de Productos, monto total comprado por cliente y por sus referidos. 
+Mostrar:
+descripción del Tipo de Producto, Nombre y apellido del cliente, monto total comprado de ese
+tipo de producto, Nombre y apellido de su cliente referido y el monto total comprado de su
+referido. Ordenado por Descripción, Apellido y Nombre del cliente (Referente).
+Nota: Si el Cliente no tiene referidos o sus referidos no compraron el mismo producto, 
+mostrar -- ́como nombre y apellido del referido y 0 (cero) en la cantidad vendida.
+*/
+
+
+SELECT pt.description, c.fname + ', ' + c.lname nombre_cliente, SUM(i.quantity * i.unit_price) monto_total,  COALESCE(nombre_referido, 'No tiene') nombre_referido, COALESCE(monto_total_referido, 0) monto_total_referido
+FROM customer c
+	INNER JOIN orders o ON (c.customer_num = o.customer_num)
+	INNER JOIN items i ON (i.order_num = o.order_num)
+	INNER JOIN product_types pt ON (pt.stock_num = i.stock_num)
+	LEFT JOIN (SELECT c1.customer_num, i1.stock_num,c1.fname + ', ' + c1.lname nombre_referido , SUM(i1.quantity * i1.unit_price) monto_total_referido
+			   FROM customer c1
+				  INNER JOIN orders o1 ON (c1.customer_num = o1.customer_num)
+				  INNER JOIN items i1 ON (i1.order_num = o1.order_num)
+				GROUP BY c1.customer_num, i1.stock_num,c1.fname, c1.lname) cr ON (cr.customer_num = c.customer_num_referedBy AND cr.stock_num = i.stock_num)
+GROUP BY pt.description, c.fname, c.lname,nombre_referido, monto_total_referido
+ORDER BY pt.description, nombre_referido
