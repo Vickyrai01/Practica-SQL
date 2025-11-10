@@ -22,3 +22,78 @@ FROM customer c
 				) cr ON (cr.customer_num = c.customer_num_referedBy)
 GROUP BY c.fname, c.lname, cr.nombre_referente, cr.[Promedio referente]
 HAVING SUM(i.unit_price * i.quantity) / COUNT(DISTINCT i.order_num) > cr.[Promedio referente]
+ORDER BY nombre_referido
+
+
+/*
+Dada la siguiente tabla de auditoria:
+
+Se pide realizar un proceso de “rollback” que realice las operaciones inversas a las leídas en la tabla de auditoría 
+hasta una fecha y hora enviada como parámetro.
+Si es una accion de Insert ("I"), se deberá hacer un Delete.
+Si es una accion de Update, se deberán modificar la fila actual con los datos cuya accion sea "O" (Old).
+Si la acción es un delete "D", se deberá insertar el registro en la tabla.
+Las filas a “Rollbackear” deberán ser tomados desde el instante actual hasta la fecha y  hora pasada por parámetro.
+En el caso que por cualquier motivo haya un error, se deberá cancelar la operación completa e informar el mensaje de error.
+*/
+CREATE TABLE audit_fabricante(
+	nro_audit BIGINT IDENTITY PRIMARY KEY,
+	fecha DATETIME DEFAULT getDate(),
+	accion CHAR(1) CHECK (accion IN ('I','O','N','D')),
+	manu_code char(3),
+	manu_name varchar(30),
+	lead_time smallint,
+	state char(2),
+	usuario VARCHAR(30) DEFAULT USER,
+);
+GO
+
+CREATE PROCEDURE rollbackPR 
+	@fechaMax DATETIME,
+	@fechaMin DATETIME
+AS
+BEGIN
+
+	DECLARE manu_cursor CURSOR FOR
+		SELECT accion, manu_code, manu_name, lead_time, state FROM audit_fabricante WHERE  fecha BETWEEN @fechaMax AND @fechaMin;
+
+	DECLARE @accion CHAR(1), @manu_code CHAR(3), @manu_name varchar(30), @leat_time SMALLINT, @state CHAR(2);
+
+	OPEN manu_cursor;
+	FETCH NEXT FROM manu_cursor INTO @accion, @manu_code, @manu_name, @leat_time, @state;
+
+	BEGIN TRY
+		BEGIN TRAN
+
+			WHILE(@@FETCH_STATUS = 0)
+			BEGIN
+		
+				IF(@accion = 'I') BEGIN DELETE FROM manufact WHERE manu_code = @manu_code END
+
+				IF(@accion = 'O')
+				BEGIN
+				
+					UPDATE manufact SET manu_name = @manu_name, lead_time = @leat_time, state = @state
+					WHERE manu_code = @manu_code
+				END
+
+				IF(@accion = 'D') BEGIN INSERT INTO manufact (manu_code, manu_name, lead_time, state) VALUES (@manu_code, @manu_name, @leat_time, @state) END
+
+				FETCH NEXT FROM manu_cursor INTO @accion, @manu_code, @manu_name, @leat_time, @state;
+			END
+		
+		COMMIT TRAN
+
+	END TRY
+	BEGIN CATCH 
+
+		ROLLBACK;
+		DECLARE @errorDescription VARCHAR(100);
+		SET @errorDescription = 'Error durante el rollback de datos con manu_code ' + @manu_code;
+		THROW 50099, @errorDescription, 1
+
+	END CATCH
+
+	CLOSE manu_cursor;
+	DEALLOCATE manu_cursor;
+END
