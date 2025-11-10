@@ -97,3 +97,82 @@ BEGIN
 	CLOSE manu_cursor;
 	DEALLOCATE manu_cursor;
 END
+
+/*
+El responsable del área de ventas nos informó que necesita cambiar el sistema para que a partir de ahora 
+no se borren físicamente las órdenes de compra sino que el borrado sea lógico.
+Nuestro gerente solicitó que este requerimiento se realice con triggers pero sin modificar el código del sistema actual.
+Para ello se agregaron 3 atributos a la tabla ORDERS, flag_baja (0 false / 1 baja lógica), fecha_baja (fecha de la baja), 
+user_baja (usuario que realiza la baja).
+Se requiere realizar un trigger que cuando se realice una baja que involucre uno o más filas de la tabla ORDERS, 
+realice la baja lógica de dicha/s fila/s.
+Solo se podrán borrar las órdenes que pertenezcan a clientes que tengan menos de 5 órdenes. 
+Para los clientes que tengan 5 o más ordenes se deberá insertar en una tabla BorradosFallidos el customer_num, order_num, fecha_baja y user_baja.
+Nota: asumir que ya existe la tabla BorradosFallidos y la tabla ORDERS está modificada.
+Ante algún error informarlo y deshacer todas las operaciones.
+*/
+
+SELECT * FROM orders
+
+ALTER TABLE orders ADD flag_baja BIT;
+ALTER TABLE orders ADD fecha_baja DATETIME;
+ALTER TABLE orders ADD user_baja VARCHAR(100);
+
+CREATE TABLE BorradosFallidos(
+	customer_num SMALLINT,
+	order_num SMALLINT,
+	fecha_baja DATETIME,
+	user_baja VARCHAR(100)
+)
+GO
+
+CREATE TRIGGER borradoOrdenesTR ON orders
+INSTEAD OF DELETE  AS
+BEGIN
+
+	DECLARE order_cursor CURSOR FOR
+		SELECT customer_num, order_num FROM deleted;
+
+	DECLARE @customer_num SMALLINT, @order_num SMALLINT;
+
+	OPEN order_cursor;
+	FETCH NEXT FROM order_cursor INTO @customer_num, @order_num;
+
+	
+	BEGIN TRY
+
+		WHILE(@@FETCH_STATUS = 0)
+		BEGIN
+
+			IF ((SELECT COUNT(DISTINCT order_num) FROM orders WHERE customer_num = @customer_num) > 5)
+			BEGIN
+
+				INSERT INTO BorradosFallidos VALUES (@customer_num, @order_num, GETDATE(), USER_NAME())
+
+			END
+			ELSE
+			BEGIN
+
+				UPDATE orders SET flag_baja = 1, fecha_baja = GETDATE(), user_baja = USER_NAME()
+				WHERE order_num = @order_num
+			END
+
+			FETCH NEXT FROM order_cursor INTO @customer_num, @order_num;
+		END
+		CLOSE order_cursor;
+		DEALLOCATE order_cursor;
+	
+	END TRY
+	BEGIN CATCH
+
+		DECLARE @errorDescription VARCHAR(100);
+		SET @errorDescription = 'Error durante el borrado para ' + @order_num;
+
+		CLOSE order_cursor;
+		DEALLOCATE order_cursor;
+
+		THROW 50099, @errorDescription, 1
+
+	END CATCH
+
+END
