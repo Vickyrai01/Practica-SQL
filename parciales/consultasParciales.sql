@@ -163,3 +163,25 @@ FROM manufact m
 GROUP BY m.manu_code, m.manu_name
 HAVING SUM(i.quantity * i.unit_price) > (SELECT SUM(i2.quantity * i2.unit_price) / COUNT(DISTINCT i2.manu_code) FROM items i2)
 ORDER BY cantidad_vendida DESC
+
+/*
+6)
+Listar Número de Cliente, apellido y nombre, Total Comprado por el cliente ‘Total delCliente’,
+Cantidad de Órdenes de Compra del cliente ‘OCs del Cliente’ y la Cant. de Órdenes de Compra
+solicitadas por todos los clientes ‘Cant. Total OC’, de todos aquellos clientes cuyo promedio de compra
+por Orden supere al promedio de órdenes de compra general, tengan al menos 2 órdenes y cuyo
+zipcode comience con 94.
+*/
+
+SELECT c.customer_num, c.lname + ', ' + c.fname, 
+	   SUM(i.quantity * i.unit_price) 'Total del cliente', 
+	   COUNT(DISTINCT o.order_num) 'Cant. ordenes del cliente',
+	   (SELECT COUNT(DISTINCT o1.order_num) FROM orders o1) 'Cant. ordenes totales'
+FROM customer c
+	INNER JOIN orders o ON (c.customer_num = o.customer_num)
+	INNER JOIN items i ON (i.order_num = o.order_num)
+WHERE c.zipcode LIKE '94%'
+GROUP BY c.customer_num, c.lname,c.fname
+HAVING SUM(i.quantity * i.unit_price) / COUNT(DISTINCT o.order_num) > (SELECT SUM(i1.quantity * i1.unit_price)/ COUNT(DISTINCT i1.order_num) FROM items i1)
+		AND
+		COUNT(DISTINCT o.order_num) >= 2
