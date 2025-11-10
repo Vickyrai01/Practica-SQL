@@ -185,3 +185,19 @@ GROUP BY c.customer_num, c.lname,c.fname
 HAVING SUM(i.quantity * i.unit_price) / COUNT(DISTINCT o.order_num) > (SELECT SUM(i1.quantity * i1.unit_price)/ COUNT(DISTINCT i1.order_num) FROM items i1)
 		AND
 		COUNT(DISTINCT o.order_num) >= 2
+
+
+/*
+7)
+Listar el numero, nombre, apellido, estado, cantidad de ordenes y monto total comprado de los
+clientes que no sean del estado de Wisconsin y cuyo monto total comprado sea mayor que el monto
+total promedio de órdenes de compra.
+*/
+
+SELECT c.customer_num, c.fname, c.lname, c.state, c.city, COUNT(DISTINCT o.order_num) 'cant. ordenes', SUM(i.quantity * i.unit_price) 'Total comprado'
+FROM customer c 
+	INNER JOIN orders o ON (c.customer_num = o.customer_num)
+	INNER JOIN items i  ON (o.order_num = i.order_num)
+WHERE c.state <> 'WI'
+GROUP BY c.customer_num, c.fname, c.lname, c.state, c.city
+HAVING SUM(i.quantity * i.unit_price) > (SELECT SUM(i1.quantity * i1.unit_price)/ COUNT(DISTINCT i1.order_num) FROM items i1)
