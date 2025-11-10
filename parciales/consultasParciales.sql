@@ -100,3 +100,66 @@ CREATE VIEW prov_mas_comprasVW AS
 							 GROUP BY c2.customer_num
 							 ORDER BY SUM(i2.quantity * i2.unit_price) DESC)
 	GROUP BY c.fname, c.lname, s.state
+
+	/*
+5)
+seleccionar codigo de fabricante, nombre fabricante, cantidad de ordenes del fabricante,
+cantidad total vendida del fabricante, promedio de las cantidades vendidas de todos los 
+fabricantes cuyas ventas totales sean mayores al promedio de las ventas de todos los 
+fabricantes
+mostrar el resultado ordenado por cantidad total vendida en forma descendente
+*/
+
+SELECT m.manu_code, 
+	   m.manu_name, 
+	   COUNT(DISTINCT i.order_num) cant_ordenes, 
+	   SUM(i.quantity) cantidad_vendida, 
+	   (SELECT AVG(i1.quantity)
+		FROM items i1
+		WHERE i1.manu_code IN(SELECT i2.manu_code 
+							  FROM items i2
+							  GROUP BY i2.manu_code
+							  HAVING AVG(i2.quantity * i2.unit_price) > (SELECT AVG(i3.quantity * i3.unit_price) FROM items i3))) prom_cant_ventas
+FROM manufact m 
+	INNER JOIN items i ON (m.manu_code = i.manu_code)
+GROUP BY m.manu_code, m.manu_name
+
+SELECT m.manu_code, 
+	   m.manu_name, 
+	   COUNT(DISTINCT i.order_num) cant_ordenes, 
+	   SUM(i.quantity) cantidad_vendida, 
+	   (SELECT AVG(i1.quantity)
+		FROM items i1
+		WHERE i1.manu_code IN(SELECT i2.manu_code 
+							  FROM items i2
+							  GROUP BY i2.manu_code
+							  HAVING AVG(i2.quantity * i2.unit_price) > (SELECT AVG(i3.quantity * i3.unit_price) FROM items i3))) prom_cant_ventas
+FROM manufact m 
+	INNER JOIN items i ON (m.manu_code = i.manu_code)
+GROUP BY m.manu_code, m.manu_name
+
+SELECT m.manu_code, 
+	   m.manu_name, 
+	   COUNT(DISTINCT i.order_num) cant_ordenes, 
+	   SUM(i.quantity) cantidad_vendida, 
+	   (SELECT AVG(i1.quantity)
+		FROM items i1
+		WHERE i1.manu_code IN(SELECT i2.manu_code 
+							  FROM items i2
+							  GROUP BY i2.manu_code
+							  HAVING AVG(i2.quantity * i2.unit_price) > (SELECT AVG(i3.quantity * i3.unit_price) FROM items i3))) prom_cant_ventas
+FROM manufact m 
+	INNER JOIN items i ON (m.manu_code = i.manu_code)
+GROUP BY m.manu_code, m.manu_name
+ORDER BY cantidad_vendida DESC
+
+
+SELECT m.manu_code, 
+	   m.manu_name, 
+	   COUNT(DISTINCT i.order_num) cant_ordenes, 
+	   SUM(i.quantity) cantidad_vendida, (SELECT SUM(i1.quantity * i1.unit_price) / COUNT(DISTINCT i1.manu_code) FROM items i1) promedio_ventas_totales
+FROM manufact m 
+	INNER JOIN items i ON (m.manu_code = i.manu_code)
+GROUP BY m.manu_code, m.manu_name
+HAVING SUM(i.quantity * i.unit_price) > (SELECT SUM(i2.quantity * i2.unit_price) / COUNT(DISTINCT i2.manu_code) FROM items i2)
+ORDER BY cantidad_vendida DESC
