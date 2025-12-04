@@ -149,3 +149,56 @@ BEGIN
 	CLOSE customer_cursor;
 	DEALLOCATE customer_cursor;
 END
+
+
+
+/*
+Query.
+Seleccionar número y apellido del cliente, código de fabricante, tipo de producto y cantidad de
+producto comprados a los fabricantes HSK y NRG. Solo se deben mostrar aquellos clientes 
+que hayan comprado TODOS los productos de ambos fabricantes.
+Ordenar la salida por número de cliente y cantidad comprada en forma descendente, Ej.
+*/
+
+SELECT c.customer_num, c.lname, i.stock_num, SUM(i.quantity) cantidadComprada
+FROM customer c 
+	INNER JOIN orders o ON (o.customer_num = c.customer_num)
+	INNER JOIN items i  ON (i.order_num = o.order_num)
+WHERE i.manu_code IN ('HSK', 'NRG') AND
+	  c.customer_num IN 
+	  (SELECT o1.customer_num
+	   FROM orders o1 
+		INNER JOIN items i1 ON (o1.order_num = i1.order_num)
+	   WHERE i1.manu_code IN ('HSK', 'NRG')
+	   GROUP BY o1.customer_num
+	   HAVING COUNT(DISTINCT i1.stock_num) = (SELECT COUNT(p.stock_num) FROM products p WHERE p.manu_code IN ('HSK', 'NRG')))
+GROUP BY c.customer_num, c.lname, i.stock_num
+ORDER BY c.customer_num, SUM(i.quantity) DESC
+
+SELECT
+    c.customer_num,
+    c.lname,
+    p.manu_code,
+    p.stock_num,
+    SUM(i.quantity) AS cantidad
+FROM customer c
+JOIN orders o ON c.customer_num = o.customer_num
+JOIN items i ON o.order_num = i.order_num
+JOIN products p ON i.stock_num = p.stock_num AND i.manu_code = p.manu_code
+WHERE p.manu_code IN ('HSK', 'NRG')
+GROUP BY c.customer_num, c.lname, p.manu_code, p.stock_num
+HAVING
+    NOT EXISTS (
+        SELECT 1
+        FROM products p2
+        WHERE p2.manu_code IN ('HSK', 'NRG')
+        AND NOT EXISTS (
+            SELECT 1
+            FROM orders o2
+            JOIN items i2 ON o2.order_num = i2.order_num
+            WHERE o2.customer_num = c.customer_num
+            AND i2.stock_num = p2.stock_num
+            AND i2.manu_code = p2.manu_code
+        )
+    )
+ORDER BY c.customer_num, cantidad DESC
