@@ -1,3 +1,4 @@
+-------------------------------------- 2/7/2025 ---------------------------------------------------------
 /*
 Query.
 Seleccionar número y apellido del cliente, código de fabricante, tipo de producto y cantidad de
@@ -170,3 +171,110 @@ END
 
 GO
 
+-------------------------------------- 16/7/2025 ---------------------------------------------------------
+/*
+3. Query.
+Mostrar código y nombre del fabricante, código y descripción del tipo de producto y la cantidad de unidades vendidas de 2 fabricantes, 
+del que más y que menos cantidad de unidades vendieron. Listar solo los productos que la cantidad de unidades vendidas sea mayor a 2. 
+No tener en cuenta aquellos fabricantes que no tuvieron ventas.
+Mostrar el resultado ordenado por el código del fabricante y la cantidad de unidades vendidas por producto en forma descendente. 
+Nota: No se puede utilizar la clausula WITH.
+*/
+
+SELECT m.manu_code, m.manu_name, i.stock_num, pt.description, SUM(i.quantity) cantidadVendida
+FROM manufact m 
+	INNER JOIN items i ON (i.manu_code = m.manu_code)
+	INNER JOIN product_types pt ON (i.stock_num = pt.stock_num)
+
+WHERE m.manu_code IN (SELECT TOP 1 i1.manu_code FROM items i1 GROUP BY i1.manu_code ORDER BY SUM(i1.quantity) DESC
+					   UNION
+					   SELECT TOP 1 i2.manu_code FROM items i2 GROUP BY i2.manu_code ORDER BY SUM(i2.quantity) ASC)
+GROUP BY m.manu_code, m.manu_name, i.stock_num, pt.description
+HAVING SUM(i.quantity) > 2
+ORDER BY SUM(i.quantity), m.manu_code DESC
+
+/*
+4. Procedure
+Crear un procedimiento actualiza ClientePR el cuál tomará de una tabla "NovedadesClientes" la siguiente información: 
+Customer_num, Iname, fname, Company
+Por cada fila de la tabla NovedadesClientes se deberá evaluar:
+Si el cliente existe en la tabla Customer, se deberá modificar dicho cliente en la tabla Customer con los datos leídos de 
+la tabla NovedadesClientes. Si el cliente no existe, se deberá insertar el cliente en la tabla Customer con los datos leídos 
+de la tabla NovedadesClientes.
+Además, el procedimiento deberá almacenar por cada una de las operaciones realizadas, una fila en una tabla Auditoría con los siguientes atributos:
+IdAuditoria (Identity), operación (1 ó M), customer_num, Iname, fname
+Ante cualquier error, informarlo y seguir procesando las novedades (Manejar UNA transacción por cada novedad).
+*/
+
+CREATE TABLE NovedadesClientes(
+	customer_num SMALLINT, 
+	lname VARCHAR(30),
+	fname VARCHAR(30),
+	company VARCHAR(30)
+)
+
+CREATE TABLE clientesAudit(
+	id_autditoria INT IDENTITY(1,1),
+	operacion CHAR(1) CHECK (operacion IN ('I', 'M')),
+	customer_num SMALLINT,
+	lname VARCHAR(40),
+	fname VARCHAR(40)
+)
+
+GO
+CREATE PROCEDURE ClientePR
+AS
+BEGIN
+	
+	DECLARE customerCursor CURSOR FOR
+		SELECT * FROM NovedadesClientes;
+
+	DECLARE @customer_num SMALLINT, @lname VARCHAR(30), @fname VARCHAR(30), @company VARCHAR(30);
+
+	OPEN customerCursor;
+	FETCH NEXT FROM customerCursor INTO @customer_num, @lname, @fname, @company;
+
+
+	WHILE(@@FETCH_STATUS =0)
+	BEGIN
+		
+		BEGIN TRAN
+		BEGIN TRY
+			DECLARE @operacion CHAR(1) = 'M'
+
+			IF EXISTS (SELECT 1 FROM customer WHERE customer_num = @customer_num)
+			BEGIN
+
+				UPDATE customer SET lname = @lname, fname = @fname, company = @company WHERE customer_num = @customer_num
+			END
+			ELSE
+			BEGIN
+
+				INSERT INTO customer (customer_num, lname, fname, company) VALUES (@customer_num, @lname, @fname, @company)
+				SET @operacion = 'I'
+			END
+
+			INSERT INTO clientesAudit VALUES (@operacion, @customer_num, @lname, @fname)
+
+			COMMIT TRAN
+
+		END TRY
+		BEGIN CATCH
+			
+			ROLLBACK
+
+			DECLARE @ErrorNumber VARCHAR(100) = ERROR_NUMBER();
+			DECLARE @ErrorMessage VARCHAR(100) = ERROR_MESSAGE();
+			RAISERROR('Error %d: %s', 16, 1, @ErrorNumber, @ErrorMessage);
+
+		END CATCH
+
+		FETCH NEXT FROM customerCursor INTO @customer_num, @lname, @fname, @company;
+
+	END
+
+	CLOSE customerCursor;
+	DEALLOCATE customerCursor;
+
+END
+GO
